@@ -26,7 +26,7 @@
 
 \func flip (f : Nat -> Nat -> Nat) (x : Nat) (y : Nat) : Nat => f y x
 
-\func second' : Nat -> Nat -> Nat -> Nat => flip (second 0)
+\func second' : Nat -> Nat -> Nat => flip (second 0)
 
 
 
