@@ -54,9 +54,11 @@
    cons x xs ++ ys = cons x (xs ++ ys)
 -}
 
-\func reverse {A : \Type} (list : List A) : List A \elim list
-  | nil => nil
-  | cons x xs => (reverse xs) ++ (cons x nil)
+\func reverse {A : \Type} (list : List A) : List A => rev nil list
+  \where
+      \func rev {A : \Type} (acc xs : List A) : List A \elim xs
+        | nil => acc
+        | cons x xs => rev (cons x acc) xs
 
 -- 6. Реализуйте любой алгоритм сортировки. Функцию сравнения можно принимать в качестве аргумента.
 
