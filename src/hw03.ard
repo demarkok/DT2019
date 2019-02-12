@@ -1,18 +1,18 @@
-\import lect03
+\import Utils
+\import lect03 \hiding (length)
 \import List
 
 -- 1. Докажите ассоциативность ++.
 
-\func \infixr 5 ++ {A : \Type} (xs ys : List A) : List A \elim xs
-  | nil => ys
-  | cons x xs => cons x (xs ++ ys)
-
-\func ++-assoc {A : \Type} (xs ys zs : List A) : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) => {?}
+\func ++-assoc {A : \Type} (xs ys zs : List A) : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) \elim xs
+  | nil => idp
+  | cons x xs => pmap (cons x) (++-assoc xs ys zs)
 
 -- 2. На прошлой лекции мы определяли функцию T : Bool -> \Type рекурсивно.
 --    Определите аналогичную функцию индуктивно.
 
-\data T
+\data T (p : Bool) \elim p
+  | true => ok
 
 -- 3. Напишите функцию lookup, которая принимает список и натуральное число и возвращает элемент по заданому индексу.
 --    В общем случае эту функцию определить невозможно, т.к. индекс может быть больше, чем число элементов в списке.
@@ -24,55 +24,119 @@
   | suc x, 0 => false
   | suc x, suc y => x < y
 
-\func lookup => {?}
+\func lLookup {A : \Type} (i : Nat) (xs : List A) (bounded : T (i < length xs)) : A
+  | 0, (cons x xs), p => x
+  | suc i, (cons x xs), p => lLookup i xs p
+  | 0, nil, ()
 
 -- 4. Реализуйте аналоги функции replicate для vec и Vec (эта функция создает список заданной длины, состоящий из повторений данного элемента).
 
+\func replicate_v {A : \Type} (n : Nat) (x : A) : vec A n \elim n
+  | 0 => ()
+  | suc n => (x, (replicate_v n x))
+
+\func replicate_V {A : \Type} (n : Nat) (x : A) : Vec A n \elim n
+  | 0 => fnil
+  | suc n => fcons x (replicate_V n x)
+
 -- 5. Реализуйте аналоги функции map для vec и Vec.
+
+\func map_v {A B : \Type} (f : A -> B) (n : Nat) (xs : vec A n) : vec B n \elim n
+  | 0 => ()
+  | suc n => (f xs.1, map_v f n xs.2)
+
+\func map_V {A B : \Type} (f : A -> B) {n : Nat} (xs : Vec A n) : Vec B n \elim n, xs
+  | 0, fnil => fnil
+  | suc n, fcons x xs => fcons (f x) (map_V f xs)
 
 -- 6. Реализуйте аналоги функции zipWith для vec и Vec.
 --    Функция должна принимать вектора одинаковой длины.
 
--- 7. Реализуйте Fin как рекурсивную функцию.
+\func zipWith_v {A B C : \Type} (f : A -> B -> C) (n : Nat) (xs : vec A n) (ys : vec B n) : vec C n \elim n
+  | 0 => ()
+  | suc n => ((f xs.1 ys.1), zipWith_v f n xs.2 ys.2)
+
+\func zipWith_V {A B C : \Type} (f : A -> B -> C) {n : Nat} (xs : Vec A n) (ys : Vec B n) : Vec C n \elim n, xs, ys
+  | 0, fnil, fnil => fnil
+  | suc n, fcons x xs, fcons y ys => fcons (f x y) (zipWith_V f xs ys)
 
 -- 8. Функции Fin n → A соответствуют спискам элементов A длины n.
 --    Функция, преобразующая Vec A n в Fin n → A, была реализована на лекции.
 --    Реализуйте обратную функцию.
 
-\func coin {A : \Type} {n : Nat} (f : Fin n -> A) : Vec A n => {?}
+\func coin {A : \Type} {n : Nat} (f : Fin n -> A) : Vec A n \elim n
+  | 0 => fnil
+  | suc n => fcons (f fzero) (coin (\lam x => f (fsuc x)))
 
 -- 9. Определите тип матриц и ряд функций над ними.
 
-\func Mat (A : \Type) (n m : Nat) : \Type => {?}
+\func Mat (A : \Type) (n m : Nat) : \Type => Vec (Vec A m) n
 
 -- диагональная матрица с элементами e на диагонали и z на остальных позициях.
 
-\func diag {A : \Type} (z e : A) (n : Nat) : Mat A n n => {?}
+\func diag {A : \Type} (z e : A) (n : Nat) : Mat A n n => diag'' z e n n
+    \where
+      \func diag'' {A : \Type} (z e : A) (n m : Nat) : Mat A n m \elim n
+        | 0 => fnil
+        | suc n => fcons (diag' z e m n) (diag'' z e n m)
+      \func diag' {A : \Type} (z e : A) (n i : Nat) : Vec A n \elim n, i
+        | 0, _ => fnil
+        | suc n, 0 => fcons z (diag' z e n 0)
+        | suc n, 1 => fcons e (diag' z e n 0)
+        | suc n, suc (suc i) => fcons z (diag' z e n (suc i))
 
 -- транспонирование матриц
 
-\func transpose {A : \Type} {n m : Nat} (M : Mat A n m) : Mat A m n => {?}
+\func headColumn {A : \Type} {n m : Nat} (M : Mat A n (suc m)) : Vec A n \elim n, M
+  | 0, fnil => fnil
+  | suc n, fcons (fcons h _) MRest => fcons h (headColumn MRest)
+
+\func tailColumn {A : \Type} {n m : Nat} (M : Mat A n (suc m)) : Mat A n m \elim n, M
+  | 0, fnil => fnil
+  | suc n, fcons (fcons _ t) MRest => fcons t (tailColumn MRest)
+
+\func transpose {A : \Type} {n m : Nat} (M : Mat A n m) : Mat A m n \elim m
+  | 0 => fnil
+  | suc m => fcons (headColumn M) (transpose (tailColumn M))
 
 -- сложение матриц
 
-\func matAdd {A : \Type} (add : A -> A -> A) (n m : Nat) (M N : Mat A n m) : Mat A n m => {?}
+\func matAdd {A : \Type} (add : A -> A -> A) (n m : Nat) (M N : Mat A n m) : Mat A n m => zipWith_V (zipWith_V add) N M
 
 -- умножение матриц
 
 -- z ─ нейтральный элемент по сложению.
-\func matMul {A : \Type} (z : A) (add mul : A -> A -> A) (n m k : Nat) (M : Mat A n m) (N : Mat A m k) : Mat A n k => {?}
+
+\func dotProduct {A : \Type} (z : A) (add mul : A -> A -> A) {n : Nat} (a : Vec A n) (b : Vec A n) : A \elim n, a, b
+  | 0, _, _ => z
+  | suc n, fcons hA tlA, fcons hB tlB => add (mul hA hB) (dotProduct z add mul tlA tlB)
+
+\func matMul {A : \Type} (z : A) (add mul : A -> A -> A) (n m k : Nat) (M : Mat A n m) (N : Mat A m k) : Mat A n k \elim n, M
+  | 0, fnil => fnil
+  | suc n, fcons headM tailM => fcons (map_V (dotProduct z add mul headM) (transpose N)) (matMul z add mul n m k tailM N)
+
 
 -- 10. Определите тип CTree A n бинарных деревьев высоты ровно n, которые хранят элементы только во внутренних узлах, но не в листьях.
 --     Высота листа равна 0.
 --     Любое такое бинарное дерево будет полным.
 
-\data CTree (A : \Type) (n : Nat)
+\data CTree (A : \Type) (n : Nat) \elim n
+  | 0 => cleaf
+  | suc n => ctree (CTree A n) (CTree A n)
 
 -- 11. Определите тип Tree A n бинарных деревьев высоты не больше n, которые хранят элементы только во внутренних узлах, но не в листьях.
 --     Высота листа равна 0.
 
-\data Tree (A : \Type) (n : Nat)
+\data Tree (A : \Type) (n : Nat) \elim n
+  | _ => leaf
+  | suc n => tree (Tree A n) (Tree A n)
 
 -- определите функцию, возвращающую высоту дерева.
 
-\func height {A : \Type} (n : Nat) (t : Tree A n) : Fin (suc n) => {?}
+\func maxFin {n : Nat} (a : Fin n) (b : Fin n) : Fin n =>
+  if (toNat a < toNat b) b a
+
+\func height {A : \Type} (n : Nat) (t : Tree A n) : Fin (suc n) \elim n, t
+  | 0, leaf => fzero
+  | suc n, leaf => fzero
+  | suc n, tree ta tb =>  fsuc (maxFin (height n ta) (height n tb))

@@ -1,5 +1,5 @@
 \import Utils
-\import List
+\import List \hiding (length)
 \open Nat
 
 -- 1. \elim или \case?
