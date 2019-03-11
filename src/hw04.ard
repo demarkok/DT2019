@@ -1,6 +1,7 @@
 \import Bool
 \import Empty
 \import lect04
+\import List
 
 -- 1. Определите конгруэнтность для функций двух аргументов через transport.
 --    Можно использовать любые функции, определенные через transport.
@@ -65,13 +66,13 @@
 
 \func notNotId : (\lam x => not (not x)) = (\lam x => x) =>
   funExt (\lam _ => Bool) notnotb=b \where
-    \func notnotb=b (b : Bool) : (not (not b) = b) \elim b
-      | true => idp
-      | false => idp
+  \func notnotb=b (b : Bool) : (not (not b) = b) \elim b
+    | true => idp
+    | false => idp
 
 -- 10. Определите факториал через Nat-rec.
 
-\func fact : Nat -> Nat => Nat-rec Nat 1 (*)
+\func fact : Nat -> Nat => Nat-rec Nat 1 (\lam x y => (suc x) * y)
 
 -- 11. Докажите ассоциативность сложения для натуральных чисел через Nat-elim.
 
@@ -90,8 +91,6 @@
   | con2 D D
   | con3 (Nat -> D)
 
--- 13. Определите рекурсор и элиминатор для List.
-
 \func D-elim (P : D -> \Type)
              (z : \Pi (n : Nat) -> P (con1 n))
              (s2 : \Pi (d1 d2 : D) -> P d1 -> P d2 -> P (con2 d1 d2))
@@ -101,12 +100,39 @@
   | con2 d1 d2 => s2 d1 d2 (D-elim P z s2 s3 d1) (D-elim P z s2 s3 d2)
   | con3 f => s3 f (\lam x => D-elim P z s2 s3 (f x))
 
+\func D-rec (P : \Type)
+            (z : Nat -> P)
+            (s2 : D -> D -> P -> P -> P)
+            (s3 : (Nat -> D) -> (Nat -> P) -> P)
+            (d : D) : P \elim d
+  | con1 x => z x
+  | con2 d1 d2 => s2 d1 d2 (D-rec P z s2 s3 d1) (D-rec P z s2 s3 d2)
+  | con3 f => s3 f (\lam x => D-rec P z s2 s3 (f x))
+
+-- 13. Определите рекурсор и элиминатор для List.
+
+\func List-elim {A : \Type}
+                (P : List A -> \Type)
+                (z : P nil)
+                (s : \Pi (x : A) (xs : List A) -> P xs -> P (cons x xs))
+                (xs : List A) : P xs \elim xs
+  | nil => z
+  | cons x xs => s x xs (List-elim P z s xs)
+
+\func List-rec {A : \Type}
+               (P : \Type)
+               (z : P)
+               (s : A -> (List A) -> P -> P)
+               (xs : List A) : P \elim xs
+  | nil => z
+  | cons x xs => s x xs (List-rec P z s xs)
+
 -- 14. Докажите, что 0 не равно suc x.
 
 \func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => T-absurd (transport T (sym p) ss) \where
   \data T (x : Nat) \elim x
     | suc _ => ss
-  \func T-absurd {A : \Type} (p : zero/=suc.T 0) : A
+\func T-absurd {A : \Type} (p : zero/=suc.T 0) : A
 
 -- 15. Докажите, что fac не равен suc.
 
