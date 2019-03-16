@@ -1,4 +1,4 @@
-\import Utils (sym)
+\import Utils (idp, sym)
 \import hw02
 \import lect05
 \import lect06

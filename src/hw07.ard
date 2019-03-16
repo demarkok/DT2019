@@ -1,0 +1,106 @@
+\import Bool
+\import Empty (Empty)
+\import Utils (pmap, sym, transport)
+\import hw04 (pmap2)
+\import lect04 (true/=false)
+\import lect07
+\open Nat
+
+-- 1. Реализуйте любой алгоритм сортировки, используя case для паттерн матчинга на результате сравнения элементов списка.
+
+\func sort {A : \Type} (comparator : A -> A -> Bool) (list : List A) : List A \elim list
+  | nil => nil
+  | cons x xs => insert comparator (sort comparator xs) x \where
+  \func insert {A : \Type} (comparator : A -> A -> Bool) (list : List A) (c : A) : List A \elim list
+    | nil => cons c nil
+    | cons x xs => \case (comparator x c) \with {
+      | true => cons x (insert comparator xs c)
+      | false => cons c (cons x xs)
+    }
+
+-- 2. Определите filter через if, а не через case.
+--    Докажите для этой версии filter лемму filter-lem.
+
+\func filter' {A : \Type} (p : A -> Bool) (xs : List A) : List A \elim xs
+  | nil => nil
+  | cons x xs => if (p x) (cons x (filter' p xs)) (filter' p xs)
+
+\func filter-lem' {A : \Type} (p : A -> Bool) (xs : List A) : length (filter' p xs) <= length xs \elim xs
+  | nil => unit
+  | cons x xs => \case p x \as b \return length (if b (cons x (filter' p xs)) (filter' p xs)) <= suc (length xs) \with {
+    | true => filter-lem' p xs
+    | false => <=-helper (filter-lem' p xs)
+  }
+
+-- 3. Докажите, что если равенство элементов A разрешимо, то и равенство элементов List A тоже разрешимо.
+
+\open Eq(==)
+
+\func notNil {A : \Type} (l : List A) : Bool
+  | nil => false
+  | cons _ _ => true
+
+\func cons/=nil {A : \Type} (x : A) (xs : List A) : (cons x xs) = nil -> Empty => \lam x => true/=false (pmap notNil x)
+
+\func tail {A : \Type} (xs : List A) : List A
+  | nil => nil
+  | cons _ xs => xs
+
+\func head {A : \Type} (x : A) (xs : List A) : A \elim xs
+  | nil => x
+  | cons x _ => x
+
+\instance ListEq {A : \Type} (dec : Eq A) : Eq (List A)
+  | decideEq => listEq \where {
+    \func listEq {A : \Type} {dec : Eq A} (l1 : List A) (l2 : List A) : Decide (l1 = l2) \elim l1, l2
+      | cons x xs, nil => no (cons/=nil x xs)
+      | nil, cons x xs => no (\lam p => (cons/=nil x xs) (sym p))
+      | nil, nil => yes idp
+      | cons x1 xs1, cons x2 xs2 => \case (decideEq x1 x2), (listEq xs1 xs2) \with {
+        | yes px, yes pxs => yes (pmap2 cons px pxs)
+        | no px, _ => no (\lam v => px (pmap (head x1) v))
+        | _, no pxs => no (\lam v => pxs (pmap tail v))
+      }
+
+
+}
+
+-- 4. Докажите, что предикат isEven разрешим.
+
+\func isEven (n : Nat) => \Sigma (k : Nat) (n = 2 * k)
+
+\func isEven-dec : DecPred isEven => {?}
+
+-- 5. Докажите, что если равенство элементов A разрешимо, то любой список элементов A либо пуст, либо состоит из повторений одного элемента, либо в A существует два различных элемента.
+
+\func repeat {A : \Type} (n : Nat) (a : A) : List A \elim n
+  | 0 => nil
+  | suc n => cons a (repeat n a)
+
+\data Result (A : \Type) (xs : List A)
+  | empty (xs = nil)
+  | repeated (n : Nat) (a : A) (p : xs = repeat n a)
+  | A-is-not-trivial (a a' : A) (p : a = a' -> Empty)
+
+\func lemma {A : \Type} (xs : List A) {dec : DecEq A} : Result A xs => {?}
+
+-- 6. Определите view, представляющий число в виде частного и остатка от деления его на произвольное (неотрицательное) число m.
+--    Реализуйте функцию деления.
+
+\data ModView (m n : Nat)
+  | quot-rem (q r : Nat) (t : T (r < m)) (p : n = q * m + r)
+
+\func mod-view (m n : Nat) (t : T (0 < m)) : ModView m n => {?}
+
+\func div (n m : Nat) (t : T (0 < m)) : Nat => {?}
+
+-- 7. Докажите, что функции FromBoolToDec и FromDecToBool взаимно обратны.
+
+\func bdb {A : \Type} (p : A -> Bool) : FromDecToBool (FromBoolToDec p) = p => {?}
+
+-- Мы не можем доказать, что FromBoolToDec (FromDecToBool P) = P, но мы можем доказать более слабое утверждение: эти предикаты логически эквивалентны.
+-- Для этого введем эквивалентность предикатов.
+
+\func \infix 4 <-> {A : \Type} (P Q : A -> \Type) => \Pi (x : A) -> \Sigma (P x -> Q x) (Q x -> P x)
+
+\func dbd {A : \Type} (P : \Sigma (P : A -> \Type) (DecPred P)) : (FromBoolToDec (FromDecToBool P)).1 <-> P.1 => {?}

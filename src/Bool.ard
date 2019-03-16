@@ -5,3 +5,7 @@
 
 -- T false is empty
 \func T-absurd {A : \Type} (t : T false) : A
+
+\func if {A : \Type} (condition : Bool) (then else : A) : A \elim condition
+  | true => then
+  | false => else
