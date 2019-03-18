@@ -1,11 +1,16 @@
 \data Bool | true | false
 
+\func if (x : Bool) (t e : Nat) : Nat \elim x
+  | true => t
+  | false => e
+
 \data T (b : Bool) \with
   | true => tt
 
 -- T false is empty
 \func T-absurd {A : \Type} (t : T false) : A
 
-\func if {A : \Type} (condition : Bool) (then else : A) : A \elim condition
-  | true => then
-  | false => else
+\func \infix 4 < (x y : Nat) : Bool
+  | _, 0 => false
+  | 0, suc _ => true
+  | suc x, suc y => x < y

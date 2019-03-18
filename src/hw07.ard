@@ -1,6 +1,7 @@
 \import Bool
 \import Empty (Empty)
-\import Utils (pmap, sym, transport)
+\import List (List, cons, nil)
+\import Utils (idp, pmap, sym, transport)
 \import hw04 (pmap2)
 \import lect04 (true/=false)
 \import lect07
