@@ -1,4 +1,5 @@
 \import Utils
+\import hw04 (pmap2)
 \import lect05
 \open Nat
 
@@ -50,7 +51,7 @@
 
 \func Jalt {A : \Type} (B : \Pi (a a' : A) -> a = a' -> \Type)
     (b : \Pi (a : A) -> B a a idp)
-    {a a' : A} (p : a = a') : B a a' p => {?}
+    {a a' : A} (p : a = a') : B a a' p => J {A} {a} (B a) (b a) {a'} p
 
 -- Выразите J через Jalt. Можно пользоваться только Jalt, idp и всем, что через них выражается.
 -- Hint:
@@ -58,13 +59,17 @@
 -- 2. Докажите, что тип \Sigma (x : A) (a = x) одноэлементный, то есть, что для любого p : \Sigma (x : A) (a = x) верно, что (x,idp) = p.
 -- 3. Используя эти две конструкции, легко определить J.
 
-\func transport' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' => {?}
+\func transport' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' =>
+  (Jalt {A} (\lam a a' _ => B a -> B a') (\lam b x => x) {a} {a'} p) b
 
-\func sigma-contr {A : \Type} {a : A} (p : \Sigma (x : A) (a = x)) : (a,idp) = {\Sigma (x : A) (a = x)} p => {?}
+\func sigma-contr {A : \Type} {a : A} (p : \Sigma (x : A) (a = x)) : (a,idp) = {\Sigma (x : A) (a = x)} p =>
+  Jalt (\lam a a' e => (a, idp) = {\Sigma (x : A) (a = x)} (a', e)) (\lam a => idp) p.2
+-- А получится ли это доказать с помощью pmap2?
 
 \func J' {A : \Type} {a : A} (B : \Pi (a' : A) -> a = a' -> \Type)
     (b : B a idp)
-    {a' : A} (p : a = a') : B a' p => {?}
+    {a' : A} (p : a = a') : B a' p => transport' {\Sigma (x : A) (a = x)} (\lam pair => B pair.1 pair.2)
+                                                 (sigma-contr (a', p)) b
 
 -- 5. Определите предикат принадлежности элемента списку.
 

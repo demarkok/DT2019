@@ -52,14 +52,6 @@
         (False,a) -> undefined
 -}
 
-\func \infixr 3 && (x y : Bool) : Bool \elim x
-  | true => y
-  | false => false
-{- Haskell:
-   (&&) :: Bool -> Bool -> Bool
-   True && y = y
-   True && _ = False
--}
 
 -- 2. Nat, +, *
 

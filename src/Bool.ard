@@ -1,6 +1,6 @@
 \data Bool | true | false
 
-\func if (x : Bool) (t e : Nat) : Nat \elim x
+\func if {A : \Type} (x : Bool) (t e : A) : A \elim x
   | true => t
   | false => e
 
@@ -14,3 +14,13 @@
   | _, 0 => false
   | 0, suc _ => true
   | suc x, suc y => x < y
+
+
+\func \infixr 3 && (x y : Bool) : Bool \elim x
+  | true => y
+  | false => false
+{- Haskell:
+   (&&) :: Bool -> Bool -> Bool
+   True && y = y
+   True && _ = False
+-}
