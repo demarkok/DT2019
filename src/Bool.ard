@@ -1,3 +1,6 @@
+\import Empty
+\import lect04
+
 \data Bool | true | false
 
 \func if {A : \Type} (x : Bool) (t e : A) : A \elim x
@@ -9,6 +12,10 @@
 
 -- T false is empty
 \func T-absurd {A : \Type} (t : T false) : A
+
+\func T-true {b : Bool} (p : b = true) : T b \elim b
+  | true => tt
+  | false => absurd (true/=false (sym p))
 
 \func \infix 4 < (x y : Nat) : Bool
   | _, 0 => false
@@ -24,3 +31,7 @@
    True && y = y
    True && _ = False
 -}
+
+\func not (b : Bool) : Bool
+  | true => false
+  | false => true

@@ -1,19 +1,44 @@
-\import lect08
+\import Bool
+\import Empty
+\import List
+\import Utils
+\import hw02 (||)
+\import hw07 (cons/=nil, head, tail)
+\import lect01
+\import lect02 (-)
+\import lect08 (Functor, Maybe, Nat-ind)
 
 -- 1. Укажите явно чему равен уровень в каждом из вызовов id' ниже.
 --    Напишите явно чему равны типы всех функций idTest*.
 
 \func id' {A : \Type} (a : A) => a
 
-\func idTest1 => id' (id' id)
-\func idTest2 => id' Maybe
-\func idTest3 => id' Functor
-\func idTest4 => id' (Functor Maybe)
-\func idTest5 (f : \Pi {A B : \Type} -> (A -> B) -> Maybe A -> Maybe B) => id' (Functor Maybe f)
+\func idTest1 : \Pi {A : \Type0} -> A -> A => id' \level 1 _ {\Pi {A : \Type0} -> A -> A} (id' {\Pi {A : \Type} -> A -> A} id)
+\func idTest2 : \Type0 -> \Type0 => id' \level 1 _ {\Type0 -> \Type0} Maybe
+\func idTest3 : \Type (\suc \lp) => id' \level (\suc (\suc \lp)) _ {\Type (\suc \lp)} Functor
+\func idTest4 : \Type (\suc \lp) => id' \level (\suc (\suc \lp)) _ {\Type (\suc \lp)} (Functor Maybe)
+\func idTest5 (f : \Pi {A B : \Type} -> (A -> B) -> Maybe A -> Maybe B) : \Type0 => id' (\level 1 _) {\Type0} (Functor Maybe f)
 
 -- 2. Определите div через Nat-ind.
 
-\func div (n k : Nat) : Nat => {?}
+
+
+\func n-suc<n (n k : Nat) (p : n < suc k = false) : T (n - suc k < n) => {?}
+
+\func div (n k : Nat) : Nat => Nat-ind (\lam _ => Nat) (t k) n \where
+  \func t (k : Nat) (n : Nat) (p : \Pi (n' : Nat) -> T (n' < n) -> Nat) : Nat \elim k
+    | 0 => 0
+    | suc k => \case (n < suc k) \as a, idp : (n < suc k) = a \with {
+      | true, _ => 0
+      | false, r => {?}
+    }
+
+
+    => \case k, (n < k) \as a, T (n < k) \with {
+    | _, 0 => 0
+    | true, _ => 0
+    | false, suc k => suc (p (n - (suc k)) {?})
+  }
 
 -- 3. Реализуйте функцию filter и докажите ее корректность, то есть, что выполнены следующие условияЖ
 --    * filter p xs является подсписком xs
@@ -21,3 +46,85 @@
 --    * Любой подсписок xs с тем же свойством является подсписком filter p xs
 
 -- 4. Докажите корректности сортировки вставками.
+
+
+\class CorrectCmp {A : \Type} (cmp : A -> A -> Bool)
+  | antiSym {a b : A} : cmp a b = not (cmp b a)
+  | transit (b : A){a c : A} : cmp a c = (not (cmp a b)) || (cmp b c)
+
+
+\data IsSorted {A : \Type} (cmp : A -> A -> Bool) (x : List A) \elim x
+  | nil => empty-list
+  | cons x nil => one-element
+  | cons x (cons y l) => consS ((cmp x y) = true) (IsSorted cmp (cons y l))
+
+\func isSortedTail {A : \Type} (cmp : A -> A -> Bool) {x : A} {xs : List A} (p : IsSorted cmp (cons x xs)) : IsSorted cmp xs \elim xs
+  | nil => empty-list
+  | cons xx xxs => \case p \with {
+    | consS _ q => q
+  }
+
+\data IsPermutation {A : \Type} (x y : List A) \elim x, y
+  | nil, nil => nil-nil
+  | cons x (cons x' xs), cons y yx => swap-x (IsPermutation (cons x' (cons x xs)) (cons y yx))
+  | cons x xs, cons y ys => consP (x = y) (IsPermutation xs ys)
+  | x, y => trans (z : List A) (IsPermutation x z) (IsPermutation z y)
+
+\func eqListsPerm {A : \Type} {x y : List A} (p : x = y) : IsPermutation x y \elim x, y
+  | nil, nil => nil-nil
+  | cons x xs, nil => absurd (cons/=nil x xs p)
+  | nil, cons x xs => absurd (cons/=nil x xs (sym p))
+  | cons x xs, cons y ys => consP (pmap (head x) p) (eqListsPerm (pmap tail p))
+
+
+\func sortProof {A : \Type} (cmp : A -> A -> Bool) {corr : CorrectCmp cmp} (list : List A) : IsSorted cmp (sort cmp list) \elim list
+  | nil => empty-list
+  | cons x xs => insertSortProof cmp x (sort cmp xs) (sortProof cmp xs)
+
+\func foo {A : \Type} (cmp : A -> A -> Bool) {corr : CorrectCmp cmp} {x y : A} {list : List A} (p : cmp x y = true) (q : IsSorted cmp (cons y list)) : (IsSorted cmp (cons x list)) \elim list
+  | nil => one-element
+  | cons l ls => \case q \with {
+    | consS r w => consS (corr.transit y) w
+  }
+
+\func insertSortProof {A : \Type} (cmp : A -> A -> Bool) {corr : CorrectCmp cmp} (e : A) (xs : List A) (p : IsSorted cmp xs)
+  : IsSorted cmp (sort.insert cmp xs e) \elim xs
+  | nil => one-element
+  | cons x1 xs1 => \case (cmp x1 e) \as t, idp : (cmp x1 e) = t \return
+      IsSorted cmp (if t (cons x1 (sort.insert cmp xs1 e))
+                         (cons e (cons x1 xs1))) \with {
+    | true, q => \case xs1 \as u,  p : IsSorted cmp (cons {A} x1 u) \return
+        IsSorted cmp (cons x1 (sort.insert cmp u e)) \with {
+      | nil, _ => consS q one-element
+      | cons x2 xs2, w => \case (cmp x2 e) \as tt, idp : (cmp x2 e) = tt \return
+          IsSorted cmp (cons x1 (if tt (cons x2 (sort.insert cmp xs2 e))
+                                       (cons e (cons x2 xs2)))) \with {
+        | true, _ => \case w \with {consS fo ba => consS fo (insertSortProof cmp e xs1 (isSortedTail p))}
+        | false, r => consS q (consS (corr.antiSym *> (pmap not r)) (isSortedTail cmp w))
+      }
+    }
+    | false, q => consS (corr.antiSym *> (pmap not q)) p
+  }
+
+\func permProof {A : \Type} (cmp : A -> A -> Bool) (list : List A) : IsPermutation list (sort cmp list) \elim list
+  | nil => nil-nil
+  | cons x xs => trans (cons x (sort cmp xs)) (consP idp (permProof cmp xs)) (insertPermProof cmp x (sort cmp xs))
+
+\func insertPermProof {A : \Type} (cmp : A -> A -> Bool) (x : A) (xs : List A)
+  : IsPermutation (cons x xs) (sort.insert cmp xs x) \elim xs
+  | nil => consP idp nil-nil
+  | cons xx xxs => \case (cmp xx x) \as t \return
+      IsPermutation (cons x (cons xx xxs))
+                    (if t (cons xx (sort.insert cmp xxs x))
+                          (cons x (cons xx xxs))) \with {
+    | true => swap-x (consP idp (insertPermProof cmp x xxs))
+    | false => eqListsPerm idp
+  }
+
+\func sort {A : \Type} (comparator : A -> A -> Bool) {corr : CorrectCmp comparator} (list : List A) : List A \elim list
+  | nil => nil
+  | cons x xs => insert comparator (sort comparator xs) x \where
+  \func insert {A : \Type} (comparator : A -> A -> Bool) (list : List A) (c : A) : List A \elim list
+    | nil => cons c nil
+    | cons x xs => if (comparator x c) (cons x (insert comparator xs c)) (cons c (cons x xs))
+

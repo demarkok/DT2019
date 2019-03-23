@@ -1,3 +1,4 @@
+\import Bool
 \import Utils
 
 -- 1. \data Pair, проекции.
@@ -153,11 +154,6 @@
 -- То есть между полями и параметрами рекорда нет почти никакой разницы.
 
 -- 6. Dependent records, тип положительных натуральных чисел.
-
-\data Bool | true | false
-
-\data T (b : Bool) \with
-  | true => tt
 
 \func isPos (n : Nat) : Bool
   | 0 => false

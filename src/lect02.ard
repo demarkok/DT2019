@@ -1,6 +1,6 @@
 -- 1. Bool, not, ||, if then else
 
-\data Bool | false | true -- имена типов данных и конструкторов могут начинаться с любой буквы в отличии от хаскелла.
+--\data Bool | false | true -- имена типов данных и конструкторов могут начинаться с любой буквы в отличии от хаскелла.
 {- Haskell:
    data Bool = False | True
 -}
@@ -19,9 +19,9 @@
 \func omega => k (\lam x => app x x)
 -}
 
-\func not (x : Bool) : Bool -- \with
-  | true => false
-  | false => true
+--\func not (x : Bool) : Bool -- \with
+--  | true => false
+--  | false => true
 {- Haskell:
    not :: Bool -> Bool
    not True = False
@@ -241,9 +241,7 @@
 -- 7. Пример утверждений и доказательств.
 
 -- Функция T превращает булевское значение в соответствующее ему утверждение (одноэлементный или пустой тип).
-\func T (b : Bool) : \Type
-  | true => Unit
-  | false => Empty
+
 
 \func \infix 4 == (x y : Bool) : Bool
   | true, true => true
@@ -387,6 +385,8 @@
 -- \import X делает файл X видимым в текущем файле.
 -- Также \import делает \open.
 -- Все конструкции, которые есть для \open, также доступны для \import.
+
+\import Bool
 \import Test (foobar \as foobar', foobar3)
 \import TestDir.Test
 -- Если нужно только сделать файл видимым, но не открывать его содержимое, можно использовать следующую конструкцию:

@@ -1,4 +1,5 @@
-\import lect02 \hiding (+,*,-)
+\import Bool
+\import lect02 \hiding (+,*,-, <, not)
 \open Nat -- Здесь лежат + и *.
 
 -- I. Задания на рекурсивные определения.
@@ -15,7 +16,7 @@
 
 -- 2. Определите || через if.
 
-\func \infixr 2 || (x y : Bool) : Bool => if x true y
+\func \infixr 2 || (x y : Bool) : Bool => if x Bool.true y
 
 -- 3. Определите возведение в степень и факториал для натуральных чисел.
 
