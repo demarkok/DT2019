@@ -1,9 +1,10 @@
 \import Bool
 \import Empty (Empty)
 \import List (List, cons, nil)
-\import Utils (idp, pmap, sym, transport)
+\import Utils (*>, idp, pmap, sym, transport)
 \import hw04 (pmap2)
 \import lect04 (true/=false)
+\import lect05 (==<, >==, qed)
 \import lect07
 \open Nat
 
@@ -62,15 +63,28 @@
         | no px, _ => no (\lam v => px (pmap (head x1) v))
         | _, no pxs => no (\lam v => pxs (pmap tail v))
       }
-
-
 }
 
 -- 4. Докажите, что предикат isEven разрешим.
 
 \func isEven (n : Nat) => \Sigma (k : Nat) (n = 2 * k)
 
-\func isEven-dec : DecPred isEven => {?}
+\func predDistr2 (n : Nat) : pred (pred (2 * n)) = 2 * (pred n)
+| 0 => idp
+  | suc n => idp
+
+\func isEven-dec : DecPred isEven => decideEven \where
+  \func decideEven (n : Nat) : Decide (isEven n)
+    | 0 => yes (0, idp)
+    | 1 => no oneIsOdd
+    | suc (suc n) => \case (decideEven n) \with {
+      | yes (k, p) => yes (suc k, pmap (\lam x => suc (suc x)) p)
+      | no p => no (\lam q => p ((pred q.1, (pmap (\lam x => pred (pred x)) q.2) *> predDistr2 q.1)))
+    }
+  \func oneIsOdd : isEven 1 -> Empty => \lam p => \case p.1 \as k, p.2 : (1 = 2 * k) \with {
+    | 0, q => suc/=0 q
+    | suc k, q => suc/=0 (sym (pmap pred q))
+  }
 
 -- 5. Докажите, что если равенство элементов A разрешимо, то любой список элементов A либо пуст, либо состоит из повторений одного элемента, либо в A существует два различных элемента.
 
@@ -83,7 +97,24 @@
   | repeated (n : Nat) (a : A) (p : xs = repeat n a)
   | A-is-not-trivial (a a' : A) (p : a = a' -> Empty)
 
-\func lemma {A : \Type} (xs : List A) {dec : DecEq A} : Result A xs => {?}
+
+-- Поменял EqDeq A на Eq A
+\func lemma {A : \Type} (xs : List A) {dec : Eq A} : Result A xs \elim xs
+  | nil => empty idp
+  | cons x nil => repeated 1 x idp
+  | cons a (cons b xs) => \case (decideEq a b) \with {
+    | yes p => \case lemma (cons b xs) \with {
+      | empty p => absurd (cons/=nil b xs p)
+      | repeated (suc n) c q => repeated (suc (suc n)) b (pmap2 cons p (pmap (cons b) (
+          xs          ==< pmap tail q >==
+          repeat n c  ==< sym (pmap (repeat n) (pmap (head a) q)) >==
+          repeat n b `qed
+      )))
+      | repeated 0 c p => absurd (cons/=nil b xs p)
+      | A-is-not-trivial a a' p => A-is-not-trivial a a' p
+    }
+    | no p => A-is-not-trivial a b p
+  }
 
 -- 6. Определите view, представляющий число в виде частного и остатка от деления его на произвольное (неотрицательное) число m.
 --    Реализуйте функцию деления.
