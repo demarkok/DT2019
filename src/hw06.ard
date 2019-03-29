@@ -1,3 +1,4 @@
+\import Bool (tt)
 \import Utils (idp, sym)
 \import hw02
 \import lect05

@@ -1,19 +1,18 @@
-\import Bool
+\import Bool \using (< \as <')
 \import Empty
 \import List
 \import Utils
 \import hw02 (||)
 \import hw07 (cons/=nil, head, tail)
-\import lect01
 \import lect02 (-)
-\import lect08 (Functor, Maybe, Nat-ind)
+\import lect08 (Functor, Maybe, Nat-ind, id)
 
 -- 1. Укажите явно чему равен уровень в каждом из вызовов id' ниже.
 --    Напишите явно чему равны типы всех функций idTest*.
 
 \func id' {A : \Type} (a : A) => a
 
-\func idTest1 : \Pi {A : \Type0} -> A -> A => id' \level 1 _ {\Pi {A : \Type0} -> A -> A} (id' {\Pi {A : \Type} -> A -> A} id)
+\func idTest1 : \Pi (A : \Type0) -> A -> A => id' \level 1 _ {\Pi (A : \Type0) -> A -> A} (id' {\Pi (A : \Type) -> A -> A} id)
 \func idTest2 : \Type0 -> \Type0 => id' \level 1 _ {\Type0 -> \Type0} Maybe
 \func idTest3 : \Type (\suc \lp) => id' \level (\suc (\suc \lp)) _ {\Type (\suc \lp)} Functor
 \func idTest4 : \Type (\suc \lp) => id' \level (\suc (\suc \lp)) _ {\Type (\suc \lp)} (Functor Maybe)
@@ -22,23 +21,28 @@
 -- 2. Определите div через Nat-ind.
 
 
+\func n<sucn {n : Nat} : T (n <' suc n) \elim n
+  | 0 => tt
+  | suc n =>  n<sucn
 
-\func n-suc<n (n k : Nat) (p : n < suc k = false) : T (n - suc k < n) => {?}
+\func sucRight {n k : Nat} (p : T (n <' k)) : T (n <' suc k) \elim n, k
+  | 0, k => tt
+  | suc n, 0 => T-absurd p
+  | suc n, suc k => sucRight p
+
+\func n-suc<n {n k : Nat} (p : n <' k = false) : T (n - k <' suc n) \elim n, k
+  | 0, _ => tt
+  | suc n, 0 => n<sucn
+  | suc n, suc k => sucRight (n-suc<n p)
 
 \func div (n k : Nat) : Nat => Nat-ind (\lam _ => Nat) (t k) n \where
-  \func t (k : Nat) (n : Nat) (p : \Pi (n' : Nat) -> T (n' < n) -> Nat) : Nat \elim k
-    | 0 => 0
-    | suc k => \case (n < suc k) \as a, idp : (n < suc k) = a \with {
-      | true, _ => 0
-      | false, r => {?}
-    }
-
-
-    => \case k, (n < k) \as a, T (n < k) \with {
+  \func t (k : Nat) (n : Nat) (p : \Pi (n' : Nat) -> T (n' <' n) -> Nat) : Nat \elim k, n
+    | 0, _ => 0
     | _, 0 => 0
-    | true, _ => 0
-    | false, suc k => suc (p (n - (suc k)) {?})
-  }
+    | suc k, suc n => \case (n <' k) \as a, idp : (n <' k) = a \with {
+      | true, _ => 0
+      | false, r => suc (p (n - k) (n-suc<n r))
+    }
 
 -- 3. Реализуйте функцию filter и докажите ее корректность, то есть, что выполнены следующие условияЖ
 --    * filter p xs является подсписком xs
@@ -48,17 +52,19 @@
 -- 4. Докажите корректности сортировки вставками.
 
 
-\class CorrectCmp {A : \Type} (cmp : A -> A -> Bool)
-  | antiSym {a b : A} : cmp a b = not (cmp b a)
-  | transit (b : A){a c : A} : cmp a c = (not (cmp a b)) || (cmp b c)
+\class TotalPoset (E : \Type)
+  | \infix 4 <= : E -> E -> \Type
+  | <=-reflexive (x : E) : x <= x
+  | <=-transitive (x y z : E) : x <= y -> y <= z -> x <= z
+  | <=-antisymmetric (x y : E) : x <= y -> y <= x -> x = y
+  | totality (x y : E) : Either (x <= y) (y <= x)
 
-
-\data IsSorted {A : \Type} (cmp : A -> A -> Bool) (x : List A) \elim x
+\data IsSorted {A : TotalPoset} (x : List A) \elim x
   | nil => empty-list
   | cons x nil => one-element
-  | cons x (cons y l) => consS ((cmp x y) = true) (IsSorted cmp (cons y l))
+  | cons x (cons y l) => consS (x <= y) (IsSorted (cons y l))
 
-\func isSortedTail {A : \Type} (cmp : A -> A -> Bool) {x : A} {xs : List A} (p : IsSorted cmp (cons x xs)) : IsSorted cmp xs \elim xs
+\func isSortedTail {A : TotalPoset} {x : A} {xs : List A} (p : IsSorted (cons x xs)) : IsSorted xs \elim xs
   | nil => empty-list
   | cons xx xxs => \case p \with {
     | consS _ q => q
@@ -77,54 +83,64 @@
   | cons x xs, cons y ys => consP (pmap (head x) p) (eqListsPerm (pmap tail p))
 
 
-\func sortProof {A : \Type} (cmp : A -> A -> Bool) {corr : CorrectCmp cmp} (list : List A) : IsSorted cmp (sort cmp list) \elim list
+
+
+\func sortProof {A : TotalPoset} (list : List A) : IsSorted (sort list) \elim list
   | nil => empty-list
-  | cons x xs => insertSortProof cmp x (sort cmp xs) (sortProof cmp xs)
+  | cons x xs => insertSortProof x (sort xs) (sortProof xs)
 
-\func foo {A : \Type} (cmp : A -> A -> Bool) {corr : CorrectCmp cmp} {x y : A} {list : List A} (p : cmp x y = true) (q : IsSorted cmp (cons y list)) : (IsSorted cmp (cons x list)) \elim list
+\func insertSortProof {A : TotalPoset} (e : A) (xs : List A) (p : IsSorted xs)
+  : IsSorted (sort.insert xs e) \elim xs
   | nil => one-element
-  | cons l ls => \case q \with {
-    | consS r w => consS (corr.transit y) w
-  }
+  | cons x1 xs1 => \case (totality x1 e) \as t \return
+                    IsSorted (\case t \with {
+                      | inr _ => cons e (cons x1 xs1)
+                      | inl _ => cons x1 (sort.insert xs1 e)}) \with {
+    | inl x1<=e => foo x1<=e p
+    | inr e<=x1 => consS e<=x1 p
+  } \where {
 
-\func insertSortProof {A : \Type} (cmp : A -> A -> Bool) {corr : CorrectCmp cmp} (e : A) (xs : List A) (p : IsSorted cmp xs)
-  : IsSorted cmp (sort.insert cmp xs e) \elim xs
-  | nil => one-element
-  | cons x1 xs1 => \case (cmp x1 e) \as t, idp : (cmp x1 e) = t \return
-      IsSorted cmp (if t (cons x1 (sort.insert cmp xs1 e))
-                         (cons e (cons x1 xs1))) \with {
-    | true, q => \case xs1 \as u,  p : IsSorted cmp (cons {A} x1 u) \return
-        IsSorted cmp (cons x1 (sort.insert cmp u e)) \with {
-      | nil, _ => consS q one-element
-      | cons x2 xs2, w => \case (cmp x2 e) \as tt, idp : (cmp x2 e) = tt \return
-          IsSorted cmp (cons x1 (if tt (cons x2 (sort.insert cmp xs2 e))
-                                       (cons e (cons x2 xs2)))) \with {
-        | true, _ => \case w \with {consS fo ba => consS fo (insertSortProof cmp e xs1 (isSortedTail p))}
-        | false, r => consS q (consS (corr.antiSym *> (pmap not r)) (isSortedTail cmp w))
-      }
+  \func foo {A : TotalPoset} {x y : A} {ys : List A} (y<=x : y <= x) (q : IsSorted (cons y ys)) :
+    (IsSorted (cons y (sort.insert ys x))) \elim ys
+    | nil => consS y<=x (one-element)
+    | cons y2 ys2 => \case (totality y2 x) \as t \return
+                      IsSorted (cons y (\case t \with {
+                        | inr _ => cons x (cons y2 ys2)
+                        | inl _ => cons y2 (sort.insert ys2 x)})) \with {
+      | inl y2<=x => \case q \with {consS y<=y2 s => consS y<=y2 (foo y2<=x s)}
+      | inr x<=y2 => consS y<=x (consS x<=y2 (isSortedTail q))
     }
-    | false, q => consS (corr.antiSym *> (pmap not q)) p
-  }
+}
 
-\func permProof {A : \Type} (cmp : A -> A -> Bool) (list : List A) : IsPermutation list (sort cmp list) \elim list
+
+
+
+\func permProof {A : TotalPoset} (list : List A) : IsPermutation list (sort list) \elim list
   | nil => nil-nil
-  | cons x xs => trans (cons x (sort cmp xs)) (consP idp (permProof cmp xs)) (insertPermProof cmp x (sort cmp xs))
+  | cons x xs => trans (cons x (sort xs)) (consP idp (permProof xs)) (insertPermProof x (sort xs))
 
-\func insertPermProof {A : \Type} (cmp : A -> A -> Bool) (x : A) (xs : List A)
-  : IsPermutation (cons x xs) (sort.insert cmp xs x) \elim xs
+\func insertPermProof {A : TotalPoset} (x : A) (xs : List A)
+  : IsPermutation (cons x xs) (sort.insert xs x) \elim xs
   | nil => consP idp nil-nil
-  | cons xx xxs => \case (cmp xx x) \as t \return
-      IsPermutation (cons x (cons xx xxs))
-                    (if t (cons xx (sort.insert cmp xxs x))
-                          (cons x (cons xx xxs))) \with {
-    | true => swap-x (consP idp (insertPermProof cmp x xxs))
-    | false => eqListsPerm idp
+  | cons xx xxs => \case totality xx x \as t \return
+                    IsPermutation (cons x (cons xx xxs)) (\case t \with {
+                      | inr _ => cons x (cons xx xxs)
+                      | inl _ => cons xx (sort.insert xxs x)
+                    }) \with {
+    | inl xx<=x => swap-x (consP idp (insertPermProof x xxs))
+    | inr x<=xx => eqListsPerm idp
   }
 
-\func sort {A : \Type} (comparator : A -> A -> Bool) {corr : CorrectCmp comparator} (list : List A) : List A \elim list
+
+
+
+\func sort {A : TotalPoset} (list : List A) : List A \elim list
   | nil => nil
-  | cons x xs => insert comparator (sort comparator xs) x \where
-  \func insert {A : \Type} (comparator : A -> A -> Bool) (list : List A) (c : A) : List A \elim list
+  | cons x xs => insert (sort xs) x \where
+  \func insert {A : TotalPoset} (list : List A) (c : A) : List A \elim list
     | nil => cons c nil
-    | cons x xs => if (comparator x c) (cons x (insert comparator xs c)) (cons c (cons x xs))
+    | cons x xs =>  \case (totality x c) \with {
+      | inl x<=c => cons x (insert xs c)
+      | inr c<=x => cons c (cons x xs)
+    }
 

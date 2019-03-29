@@ -1,3 +1,4 @@
+\import Bool
 \import Utils
 \import lect03 \hiding (length)
 \import List

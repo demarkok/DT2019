@@ -1,5 +1,5 @@
 \import Bool
-\import lect02 \hiding (+,*,-, <, not)
+\import lect02 \hiding (+,*,-, <)
 \open Nat -- Здесь лежат + и *.
 
 -- I. Задания на рекурсивные определения.
